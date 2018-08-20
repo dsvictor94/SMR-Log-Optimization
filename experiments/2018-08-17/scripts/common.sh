@@ -18,7 +18,7 @@ function exec_at {
     host="$1"
     shift
 
-    cmd="nohup $(printf '%q ' "$@") &>$(printf '%q' "${output}") </dev/null &"
+    cmd="nohup $(printf '%q ' "$@") >& $(printf '%q' "${output}") </dev/null &"
     
     if [ "$DEBUG" == "TRUE" ]; then
         echo "$cmd"
