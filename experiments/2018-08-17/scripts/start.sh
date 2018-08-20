@@ -44,23 +44,24 @@ for i in ${!pattern[@]}; do
     done
     pause
 
+    nodeid=1
+
     echo "Starting Proposers"
     for node in "${proposer_nodes[@]}"; do
-        exec_at --output "$(output proposer "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; ${paxos_folder}/thriftnode.sh 1,1:PA ${zoo}"
+        exec_at --output "$(output proposer "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; ${paxos_folder}/thriftnode.sh 1,$((nodeid++)):PA ${zoo}"
     done
     pause
 
     echo "Starting Acceptors"
     for node in "${acceptor_nodes[@]}"; do
-        exec_at --output "$(output acceptor "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; ${paxos_folder}/thriftnode.sh 1,2:A ${zoo}"
+        exec_at --output "$(output acceptor "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; ${paxos_folder}/thriftnode.sh 1,$((nodeid++)):A ${zoo}"
     done
     pause
 
-    # export DEBUG=TRUE
     echo "Starting Replicas"
     for node in "${replica_nodes[@]}"; do
         # need the sleep becouse re replica stops if stdin close
-        exec_at --output "$(output replica "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; sleep 100000000 | ${smr_folder}/replica.sh 1,3,0 0 ${zoo}"
+        exec_at --output "$(output replica "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; sleep 100000000 | ${smr_folder}/replica.sh 1,$((nodeid++)),0 0 ${zoo}"
     done
     pause
 
