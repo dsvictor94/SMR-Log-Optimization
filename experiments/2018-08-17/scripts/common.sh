@@ -24,8 +24,7 @@ function exec_at {
         echo "$cmd"
     else
         ssh -f -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
-            -i "${private_key:-/dev/null}" "$user@$host" \
-            "$cmd"
+            "$user@$host" "$cmd"
     fi  
 }
 
