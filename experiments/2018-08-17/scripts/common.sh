@@ -54,7 +54,7 @@ function max {
     echo $max
 }
 
-workfolder="$(cd ..; pwd)"
+workfolder="$(cd "$(dirname $0)/.."; pwd)"
 
 resources="$workfolder/resources"
 opt_folder="$workfolder/opt"
