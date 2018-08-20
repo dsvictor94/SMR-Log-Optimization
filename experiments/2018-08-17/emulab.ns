@@ -11,7 +11,7 @@ set lanstr ""
 for {set i 1} {$i <= $max_zoo} {incr i} {
     set zoo($i) [$ns node]
     append lanstr "$zoo($i) "
-    tb-set-hardware $zoo($i) d710
+    tb-set-hardware $zoo($i) pc3000
     tb-set-node-os $zoo($i) CENTOS6-64-STD
 
     tb-set-node-rpms $zoo($i) /users/dsvictor/packages/jdk-8u181-linux-x64.rpm
@@ -21,7 +21,7 @@ for {set i 1} {$i <= $max_zoo} {incr i} {
 for {set i 1} {$i <= $max_ring} {incr i} {
     set ring($i) [$ns node]
     append lanstr "$ring($i) "
-    tb-set-hardware $ring($i) d710
+    tb-set-hardware $ring($i) pc3000
     tb-set-node-os $ring($i) CENTOS6-64-STD
 
     tb-set-node-rpms $ring($i) /users/dsvictor/packages/jdk-8u181-linux-x64.rpm

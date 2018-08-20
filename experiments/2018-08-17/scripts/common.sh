@@ -1,6 +1,6 @@
 function join_by { local IFS="$1"; shift; echo "$*"; }
 
-source "./vars.sh"
+source "$(dirname $0)/vars.sh"
 
 function exec_at {
     if [ "$1" == '--output' ]; then
@@ -55,7 +55,7 @@ function max {
     echo $max
 }
 
-workfolder="$(realpath -s ..)"
+workfolder="$(realpath -s $(dirname $0)/..)"
 
 resources="$workfolder/resources"
 opt_folder="$workfolder/opt"
