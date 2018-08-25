@@ -28,6 +28,10 @@ fi
 
 echo "Starting"
 
+DISCOVER=export\ IFACE=\$\(printf\ \"%s\ \"\ \`/sbin/ifconfig\ \|\ cut\ -d\'\ \'\ -f1\`\ \|\ awk\ \'\{print\ \$2\}\'\)\;\ echo\ IFACE\=\$IFACE
+
+eval $DISCOVER
+
 zoo_folder="${opt_folder}/zookeeper-3.4.12/bin"
 paxos_folder="${opt_folder}/Paxos-trunk"
 smr_folder="${opt_folder}/SMR-trunk"
@@ -40,7 +44,7 @@ for i in ${!pattern[@]}; do
 
     echo "Starting Zookeepers"
     for node in "${zoo_nodes[@]}"; do
-        exec_at --output "$(output zookeeper "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; $zoo_folder/zkServer.sh start $config_folder/zookeper.cfg"
+        exec_at --output "$(output zookeeper "$i" "$node")" "$node" sh -c "$DISCOVER; $zoo_folder/zkServer.sh start $config_folder/zookeper.cfg"
     done
     pause
 
@@ -48,20 +52,20 @@ for i in ${!pattern[@]}; do
 
     echo "Starting Proposers"
     for node in "${proposer_nodes[@]}"; do
-        exec_at --output "$(output proposer "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; ${paxos_folder}/thriftnode.sh 1,$((nodeid++)):PA ${zoo}"
+        exec_at --output "$(output proposer "$i" "$node")" "$node" sh -c "$DISCOVER; ${paxos_folder}/thriftnode.sh 1,$((nodeid++)):PA ${zoo}"
     done
     pause
 
     echo "Starting Acceptors"
     for node in "${acceptor_nodes[@]}"; do
-        exec_at --output "$(output acceptor "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; ${paxos_folder}/thriftnode.sh 1,$((nodeid++)):A ${zoo}"
+        exec_at --output "$(output acceptor "$i" "$node")" "$node" sh -c "$DISCOVER; ${paxos_folder}/thriftnode.sh 1,$((nodeid++)):A ${zoo}"
     done
     pause
 
     echo "Starting Replicas"
     for node in "${replica_nodes[@]}"; do
         # need the sleep becouse re replica stops if stdin close
-        exec_at --output "$(output replica "$i" "$node")" "$node" sh -c "export IFACE=${ethernet}; sleep 100000000 | ${smr_folder}/replica.sh 1,$((nodeid++)),0 0 ${zoo}"
+        exec_at --output "$(output replica "$i" "$node")" "$node" sh -c "$DISCOVER; sleep 100000000 | ${smr_folder}/replica.sh 1,$((nodeid++)),0 0 ${zoo}"
     done
     pause
 
@@ -73,7 +77,7 @@ for i in ${!pattern[@]}; do
         fi
 
         num_threads=$(( $remaning_threads > $max_threads_per_node ? $max_threads_per_node : $remaning_threads ))
-        exec_at --output "$(output client $i "$node")" "$node" sh -c "export IFACE=${ethernet}; printf 'start ${num_threads} ${requests_p_thread} ${cmd_size} ${cmds_per_batch}\n' | ${smr_folder}/client.sh 1,1 ${zoo}"
+        exec_at --output "$(output client $i "$node")" "$node" sh -c "$DISCOVER; printf 'start ${num_threads} ${requests_p_thread} ${cmd_size} ${cmds_per_batch}\n' | ${smr_folder}/client.sh 1,1 ${zoo}"
 
         remaning_threads=$(( $remaning_threads - $num_threads ))
     done
