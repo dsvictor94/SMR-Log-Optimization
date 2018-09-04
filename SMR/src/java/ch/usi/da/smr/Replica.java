@@ -38,7 +38,8 @@ import org.apache.log4j.Logger;
 
 import ch.usi.da.paxos.Util;
 import ch.usi.da.smr.Replica;
-import ch.usi.da.smr.log.SyncLogger;
+import ch.usi.da.smr.log.LoggerFactory;
+import ch.usi.da.smr.log.LoggerInterface;
 import ch.usi.da.smr.message.Command;
 import ch.usi.da.smr.message.CommandType;
 import ch.usi.da.smr.message.Message;
@@ -135,7 +136,7 @@ public class Replica implements Receiver {
 	private String serverFTP = "192.168.3.91";
 	private int portFTP = 2121;
 	
-	private SyncLogger replicaLogger;
+	private LoggerInterface replicaLogger;
 	
 	public Replica(String token, int ringID, int nodeID, int snapshot_modulo, String zoo_host) throws Exception {
 		
@@ -164,7 +165,7 @@ public class Replica implements Receiver {
 			stable_storage = new DfsRecovery(nodeID,token,"/tmp/smr",partitions);
 		}
 		
-		this.replicaLogger = new SyncLogger();
+		this.replicaLogger = LoggerFactory.getLogger();
 
 		if(compressedCmds)
 			gzip = new GzipCompress();
@@ -201,7 +202,7 @@ public class Replica implements Receiver {
 			stable_storage = new DfsRecovery(nodeID,token,"/tmp/smr",partitions);
 		}
 		
-		this.replicaLogger = new SyncLogger();
+		this.replicaLogger = LoggerFactory.getLogger();
 		
 		if(compressedCmds)
 			gzip = new GzipCompress();

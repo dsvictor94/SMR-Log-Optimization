@@ -6,14 +6,14 @@ import java.util.Map;
 
 import ch.usi.da.smr.message.Message;
 
-public class SyncLogger implements LoggerInterface {
+public class InMemory implements LoggerInterface {
 
     private Map<Integer, Long> lastInstance;
     private Map<Integer, Long> firstInstance;
 
     private Map<Integer, ArrayList<Message>> log;
 
-    public SyncLogger() {
+    public InMemory() {
         this.lastInstance = new HashMap<>();
         this.firstInstance = new HashMap<>();
         this.log = new HashMap<>();
