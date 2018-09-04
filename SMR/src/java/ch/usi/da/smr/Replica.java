@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 
 import ch.usi.da.paxos.Util;
 import ch.usi.da.smr.Replica;
+import ch.usi.da.smr.log.SyncLogger;
 import ch.usi.da.smr.message.Command;
 import ch.usi.da.smr.message.CommandType;
 import ch.usi.da.smr.message.Message;
@@ -134,6 +135,8 @@ public class Replica implements Receiver {
 	private String serverFTP = "192.168.3.91";
 	private int portFTP = 2121;
 	
+	private SyncLogger replicaLogger;
+	
 	public Replica(String token, int ringID, int nodeID, int snapshot_modulo, String zoo_host) throws Exception {
 		
 		this.nodeID = nodeID;
@@ -161,6 +164,8 @@ public class Replica implements Receiver {
 			stable_storage = new DfsRecovery(nodeID,token,"/tmp/smr",partitions);
 		}
 		
+		this.replicaLogger = new SyncLogger();
+
 		if(compressedCmds)
 			gzip = new GzipCompress();
 		
@@ -195,6 +200,8 @@ public class Replica implements Receiver {
 			//System.out.println("Set up checkpoint using File System");
 			stable_storage = new DfsRecovery(nodeID,token,"/tmp/smr",partitions);
 		}
+		
+		this.replicaLogger = new SyncLogger();
 		
 		if(compressedCmds)
 			gzip = new GzipCompress();
@@ -258,7 +265,7 @@ public class Replica implements Receiver {
 							//	th+= throughputOutput[i];
 							//System.out.println("throughput "+th);
 							//System.out.println("parallelizer throughput: "+parallelizer.getThroughput());
-							System.out.printf("%d  %.5f\n",System.nanoTime(),getThroughput());
+							System.out.printf("%d  %.5f %d\n",System.nanoTime(),getThroughput(), replicaLogger.count());
 						} catch (InterruptedException e) {				
 							e.printStackTrace();
 						}
@@ -295,7 +302,25 @@ public class Replica implements Receiver {
 				logger.debug("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));				
 				//logger.info("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
 				exec_instance = load();
+				
+				logger.debug("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
+
+				for(Message lm : this.replicaLogger.retrive(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
+					receive(lm);
+				}
 			}
+		}
+		// send to logger
+		this.replicaLogger.store(m);
+
+		// TODO: adicionar regra para commit
+		this.replicaLogger.commit(m.getRing());
+
+		// TODO: adicionar regra para truncar o log do paxos
+		try {
+			ab.safe(m.getRing(), this.replicaLogger.getLastCommitedInstance(m.getRing()));
+		} catch(Exception e) {
+			logger.error(e);
 		}
 		
 		// write snapshot
@@ -460,7 +485,7 @@ public class Replica implements Receiver {
 				old_db.put(new String(e.getKey()),Arrays.copyOf(e.getValue(),e.getValue().length));
 			}
 			old_db.putAll(db); */
-			Thread t = new Thread(new SnapshotWriter(this,old_exec_instance,old_db,stable_storage,ab));
+			Thread t = new Thread(new SnapshotWriter(this,old_exec_instance,old_db,stable_storage,ab, replicaLogger));
 			t.start();
 		}else{
 			logger.debug("Async checkpoint supressed since other active!");

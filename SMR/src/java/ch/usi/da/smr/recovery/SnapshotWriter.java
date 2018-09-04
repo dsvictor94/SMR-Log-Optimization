@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 
 import ch.usi.da.smr.Replica;
+import ch.usi.da.smr.log.LoggerInterface;
 import ch.usi.da.smr.transport.ABListener;
 
 /**
@@ -57,7 +58,10 @@ public class SnapshotWriter implements Runnable {
 	
 	FileOutputStream debugFile = null;
 	
-	public SnapshotWriter(Replica replica, Map<Integer, Long> exec_instance,SortedMap<String, byte[]> db, RecoveryInterface stable_storage,ABListener ab) {
+	private LoggerInterface rl;
+	
+	public SnapshotWriter(Replica replica, Map<Integer, Long> exec_instance,SortedMap<String, byte[]> db, RecoveryInterface stable_storage,ABListener ab, LoggerInterface rl) {
+		this.rl = rl;
 		this.ab = ab;
 		this.db = db;
 		this.stable_storage = stable_storage;
@@ -82,6 +86,8 @@ public class SnapshotWriter implements Runnable {
 			try {
 				for(Entry<Integer, Long> e : exec_instance.entrySet()){
 					ab.safe(e.getKey(),e.getValue());
+					// truncate logger
+					rl.truncate(e.getKey(), e.getValue());
 				}
 				logger.debug("Replica checkpointed up to instance " + exec_instance);
 				//logger.info("Replica checkpointed up to instance " + exec_instance);
