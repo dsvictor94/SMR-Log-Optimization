@@ -45,7 +45,7 @@ done
 printf '%-10s ' "replica"
 printf '%-10s ' "client"
 
-for row in `ls | cut -d_ -f2 | sort | uniq`; do
+for row in `ls | cut -d_ -f2 | sort -n | uniq`; do
     printf '\n%-10s ' "$row"
     replica_values=()
     client_values=()
