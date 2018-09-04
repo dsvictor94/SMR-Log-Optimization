@@ -319,7 +319,9 @@ public class Replica implements Receiver {
 
 		// TODO: adicionar regra para truncar o log do paxos
 		try {
-			ab.safe(m.getRing(), this.replicaLogger.getLastCommitedInstance(m.getRing()));
+			long lastCommited = this.replicaLogger.getLastCommitedInstance(m.getRing());
+			if (lastCommited > 0)
+				ab.safe(m.getRing(), lastCommited);
 		} catch(Exception e) {
 			logger.error(e);
 		}
