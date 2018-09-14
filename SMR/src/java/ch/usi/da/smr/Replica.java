@@ -51,7 +51,6 @@ import ch.usi.da.smr.recovery.FTPRecovery;
 import ch.usi.da.smr.recovery.HttpRecovery;
 import ch.usi.da.smr.recovery.RecoveryInterface;
 import ch.usi.da.smr.recovery.SnapshotWriter;
-import ch.usi.da.smr.statetransfer.StateTransferFactore;
 import ch.usi.da.smr.statetransfer.StateTransferFactory;
 import ch.usi.da.smr.statetransfer.StateTransferInterface;
 import ch.usi.da.smr.transport.ABListener;
