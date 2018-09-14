@@ -8,10 +8,10 @@ import ch.usi.da.smr.message.Message;
 
 public class InMemory implements LoggerInterface {
 
-    private Map<Integer, Long> lastInstance;
-    private Map<Integer, Long> firstInstance;
+    protected Map<Integer, Long> lastInstance;
+    protected Map<Integer, Long> firstInstance;
 
-    private Map<Integer, ArrayList<Message>> log;
+    protected Map<Integer, ArrayList<Message>> log;
 
     public InMemory() {
         this.lastInstance = new HashMap<>();
@@ -20,7 +20,7 @@ public class InMemory implements LoggerInterface {
     }
 
 
-    private ArrayList<Message> getRingLog(int ring) {
+    protected ArrayList<Message> getRingLog(int ring) {
         if(!this.log.containsKey(ring)){
             this.log.put(ring, new ArrayList<Message>());
         }
@@ -28,7 +28,7 @@ public class InMemory implements LoggerInterface {
     }
 
 
-    private int toIndex(int ring, long instance) {
+    protected int toIndex(int ring, long instance) {
         return (int) (this.firstInstance.getOrDefault(ring, 0L) - instance);
     }
 

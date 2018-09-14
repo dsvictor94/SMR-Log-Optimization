@@ -74,6 +74,27 @@ public class Command {
 	public String getKey(){
 		return key;
 	}
+
+	public boolean isWrite(){
+		switch(this.getType()){
+		case PUT:
+		case DELETE:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	public boolean isRead(){
+		switch(this.getType()){
+		case GET:
+		case GETRANGE:
+		case RESPONSE:
+			return true;
+		default:
+			return false;
+		}
+	}
 	
 	public byte[] getValue(){
 		return value;
