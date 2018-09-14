@@ -51,6 +51,9 @@ import ch.usi.da.smr.recovery.FTPRecovery;
 import ch.usi.da.smr.recovery.HttpRecovery;
 import ch.usi.da.smr.recovery.RecoveryInterface;
 import ch.usi.da.smr.recovery.SnapshotWriter;
+import ch.usi.da.smr.statetransfer.StateTransferFactore;
+import ch.usi.da.smr.statetransfer.StateTransferFactory;
+import ch.usi.da.smr.statetransfer.StateTransferInterface;
 import ch.usi.da.smr.transport.ABListener;
 import ch.usi.da.smr.transport.Receiver;
 import ch.usi.da.smr.transport.UDPSender;
@@ -137,6 +140,8 @@ public class Replica implements Receiver {
 	private int portFTP = 2121;
 	
 	private LoggerInterface replicaLogger;
+
+	private StateTransferInterface stateTransfer;
 	
 	public Replica(String token, int ringID, int nodeID, int snapshot_modulo, String zoo_host) throws Exception {
 		
@@ -166,6 +171,8 @@ public class Replica implements Receiver {
 		}
 		
 		this.replicaLogger = LoggerFactory.getLogger();
+		this.stateTransfer = StateTransferFactory.getStateTransfer();
+		this.stateTransfer.init(this.replicaLogger);
 
 		if(compressedCmds)
 			gzip = new GzipCompress();
@@ -203,6 +210,8 @@ public class Replica implements Receiver {
 		}
 		
 		this.replicaLogger = LoggerFactory.getLogger();
+		this.stateTransfer = StateTransferFactory.getStateTransfer();
+		this.stateTransfer.init(this.replicaLogger);
 		
 		if(compressedCmds)
 			gzip = new GzipCompress();
@@ -280,6 +289,7 @@ public class Replica implements Receiver {
 	public void close(){
 		ab.close();
 		stable_storage.close();
+		stateTransfer.close();
 		//partitions.deregister(nodeID,token);
 	}
 
@@ -306,7 +316,7 @@ public class Replica implements Receiver {
 				
 				logger.debug("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
 
-				for(Message lm : this.replicaLogger.retrive(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
+				for(Message lm : this.stateTransfer.restore(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
 					receive(lm);
 				}
 			}
