@@ -1,0 +1,44 @@
+set ns [new Simulator]                  
+source tb_compat.tcl
+
+set max_zoo 1
+set max_ring 4
+set max_node 10
+
+set lanstr ""
+
+# Setup Zookeeper
+for {set i 1} {$i <= $max_zoo} {incr i} {
+    set zoo($i) [$ns node]
+    append lanstr "$zoo($i) "
+    tb-set-hardware $zoo($i) pc3000
+    tb-set-node-os $zoo($i) CENTOS6-64-STD
+
+    tb-set-node-rpms $zoo($i) /users/dsvictor/packages/jdk-8u181-linux-x64.rpm
+}
+
+# Setup nodes tu run Paxos
+for {set i 1} {$i <= $max_ring} {incr i} {
+    set ring($i) [$ns node]
+    append lanstr "$ring($i) "
+    tb-set-hardware $ring($i) pc3000
+    tb-set-node-os $ring($i) CENTOS6-64-STD
+
+    tb-set-node-rpms $ring($i) /users/dsvictor/packages/jdk-8u181-linux-x64.rpm
+}
+
+# Setup nodes to run Clients
+for {set i 1} {$i <= $max_node} {incr i} {
+    set node($i) [$ns node]
+    append lanstr "$node($i) "
+    tb-set-hardware $node($i) pc3000
+    tb-set-node-os $node($i) CENTOS6-64-STD
+
+    tb-set-node-rpms $node($i) /users/dsvictor/packages/jdk-8u181-linux-x64.rpm
+}
+
+# Put all the nodes in a lan
+set lan0 [$ns make-lan "$lanstr" 1Gb 0ms]
+
+# Go!
+$ns run

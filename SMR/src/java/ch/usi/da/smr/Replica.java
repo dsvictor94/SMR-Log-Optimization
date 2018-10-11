@@ -170,6 +170,7 @@ public class Replica implements Receiver {
 		}
 		
 		this.replicaLogger = LoggerFactory.getLogger();
+		this.replicaLogger.initialize(ab);
 		this.stateTransfer = StateTransferFactory.getStateTransfer();
 		this.stateTransfer.init(this.replicaLogger);
 
@@ -209,6 +210,7 @@ public class Replica implements Receiver {
 		}
 		
 		this.replicaLogger = LoggerFactory.getLogger();
+		this.replicaLogger.initialize(ab);
 		this.stateTransfer = StateTransferFactory.getStateTransfer();
 		this.stateTransfer.init(this.replicaLogger);
 		
@@ -274,7 +276,7 @@ public class Replica implements Receiver {
 							//	th+= throughputOutput[i];
 							//System.out.println("throughput "+th);
 							//System.out.println("parallelizer throughput: "+parallelizer.getThroughput());
-							System.out.printf("%d  %.5f %d\n",System.nanoTime(),getThroughput(), replicaLogger.count());
+							System.out.printf("%d  %.5f %d\n",System.nanoTime(),getThroughput(), replicaLogger.size());
 						} catch (InterruptedException e) {				
 							e.printStackTrace();
 						}
@@ -292,55 +294,9 @@ public class Replica implements Receiver {
 		//partitions.deregister(nodeID,token);
 	}
 
-	@Override
-	public void receive(Message m) {
-		logger.debug("Replica received ring " + m.getRing() + " instnace " + m.getInstnce() + " (" + m + ")");
-		
-		// skip already executed commands
-		if(m.getInstnce() <= exec_instance.get(m.getRing())){
-			return;
-		}else if(m.isSkip()){ // skip skip-instances
-			exec_instance.put(m.getRing(),m.getInstnce());
-			return;
-		}
-
+	private Message execute(Message m) {
 		List<Command> cmds = new ArrayList<Command>();
 
-		// recover if a not ascending instance arrives 
-		if(m.getInstnce()-1 != exec_instance.get(m.getRing())){
-			while(m.getInstnce()-1 > exec_instance.get(m.getRing())){
-				logger.debug("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));				
-				//logger.info("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
-				exec_instance = load();
-				
-				logger.debug("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
-
-				for(Message lm : this.stateTransfer.restore(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
-					receive(lm);
-				}
-			}
-		}
-		// send to logger
-		this.replicaLogger.store(m);
-
-		// TODO: adicionar regra para commit
-		this.replicaLogger.commit(m.getRing());
-
-		// TODO: adicionar regra para truncar o log do paxos
-		try {
-			long lastCommited = this.replicaLogger.getLastCommitedInstance(m.getRing());
-			if (lastCommited > 0)
-				ab.safe(m.getRing(), lastCommited);
-		} catch(Exception e) {
-			logger.error(e);
-		}
-		
-		// write snapshot
-		exec_cmd++;
-		if(snapshot_modulo > 0 && exec_cmd % snapshot_modulo == 0){
-			async_checkpoint(); 
-		}
-		
 		synchronized(db){
 			byte[] data = null;
 			for(Command c : m.getCommands()){
@@ -438,14 +394,53 @@ public class Replica implements Receiver {
 		    	}
 			}
 		}
-		exec_instance.put(m.getRing(),m.getInstnce());
+		
 		int msg_id = MurmurHash.hash32(m.getInstnce() + "-" + token);
-		Message msg = new Message(msg_id,token,m.getFrom(),cmds);
+		return new Message(msg_id,token,m.getFrom(), cmds);
+	}
+
+	@Override
+	public void receive(Message m) {
+		logger.debug("Replica received ring " + m.getRing() + " instnace " + m.getInstnce() + " (" + m + ")");
+		
+		while (m.getInstnce()-1 > exec_instance.get(m.getRing())) {
+			logger.debug("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
+			exec_instance = load();
+			
+			logger.debug("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
+
+			for(Message lm : this.stateTransfer.restore(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
+				execute(lm);
+				exec_instance.put(lm.getRing(), lm.getInstnce());
+			}
+		}
+
+		// skip already executed commands
+		if (m.getInstnce() <= exec_instance.get(m.getRing())) {
+			return;
+		} else if(m.isSkip() ){ // skip skip-instances
+			exec_instance.put(m.getRing(),m.getInstnce());
+			return;
+		}
+
+		// send to logger
+		this.replicaLogger.store(m);
+
+		// TODO: adicionar regra para commit
+		this.replicaLogger.commit(m.getRing());
+
+		// write snapshot
+		exec_cmd++;
+		if(snapshot_modulo > 0 && exec_cmd % snapshot_modulo == 0){
+			async_checkpoint(); 
+		}
+
+		Message msg = execute(m);
+		exec_instance.put(m.getRing(),m.getInstnce());
 		//logger.debug("Send UDP: " + msg);
 		udp.send(msg);
 		
-		cmdCount = cmdCount + cmds.size();
-		
+		cmdCount += msg.getCommands().size();
 	}
 
 	public Map<Integer,Long> load(){
