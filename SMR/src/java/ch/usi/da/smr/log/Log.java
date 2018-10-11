@@ -1,8 +1,11 @@
 package ch.usi.da.smr.log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import org.apache.log4j.Logger;
 
 import ch.usi.da.smr.message.Command;
 
@@ -12,11 +15,13 @@ public class Log {
     private long indexOffset;
     private long dataOffset;
 
+    private final static Logger logger = Logger.getLogger(Log.class);
+
     public Log() {
         this.dataOffset = 0;
         this.data = new ArrayList<Command>();
 
-        this.indexOffset = 0;
+        this.indexOffset = 1;
         this.index = new ArrayList<Long>();
     }
 
@@ -45,9 +50,20 @@ public class Log {
     }
 
     public void add(long at, Collection<Command> commands) {
+        // logger.info("Adding "+Arrays.toString(commands.toArray())+ " at "+at);
+        if (at != this.index.size() + indexOffset) {
+            // is not in sequence
+            logger.info("Logging out of sequence. resetting log to "+at);
+            this.index.clear();
+            this.data.clear();
+            this.indexOffset = at;
+            this.dataOffset = 0;
+        }
         long cmdIndex = data.size() + dataOffset;
         this.index.add((int) (at - indexOffset), cmdIndex);
         this.data.addAll(commands);
+        // logger.info("Log index: "+indexOffset+" "+Arrays.toString(index.toArray()));
+        // logger.info("Log data: "+dataOffset+" "+Arrays.toString(data.toArray()));
     }
 
     public int size() {

@@ -404,28 +404,34 @@ public class Replica implements Receiver {
 		logger.debug("Replica received ring " + m.getRing() + " instnace " + m.getInstnce() + " (" + m + ")");
 		
 		while (m.getInstnce()-1 > exec_instance.get(m.getRing())) {
-			logger.debug("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
+			logger.info("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
 			exec_instance = load();
 			
-			logger.debug("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
+			logger.info("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
 
 			for(Message lm : this.stateTransfer.restore(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
 				execute(lm);
+				this.replicaLogger.store(m);
+				this.replicaLogger.commit(m.getRing());
+
 				exec_instance.put(lm.getRing(), lm.getInstnce());
 			}
 		}
 
 		// skip already executed commands
 		if (m.getInstnce() <= exec_instance.get(m.getRing())) {
+			logger.info("Replica skip already executed commands ("+m.getInstnce()+" <= " + exec_instance.get(m.getRing()) + ")");
 			return;
 		} else if(m.isSkip() ){ // skip skip-instances
 			exec_instance.put(m.getRing(),m.getInstnce());
 			return;
 		}
 
+		// logger.info("Storing in log: "+this.replicaLogger);
 		// send to logger
 		this.replicaLogger.store(m);
 
+		// logger.info("Commiting in log");
 		// TODO: adicionar regra para commit
 		this.replicaLogger.commit(m.getRing());
 
@@ -435,9 +441,10 @@ public class Replica implements Receiver {
 			async_checkpoint(); 
 		}
 
+		// logger.info("Executing");
 		Message msg = execute(m);
 		exec_instance.put(m.getRing(),m.getInstnce());
-		//logger.debug("Send UDP: " + msg);
+		// logger.info("Send UDP: " + msg);
 		udp.send(msg);
 		
 		cmdCount += msg.getCommands().size();
