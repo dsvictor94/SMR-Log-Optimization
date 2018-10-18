@@ -35,18 +35,25 @@ public class Log {
 
     public List<Command> slice(long start, long end) {
         int fromIndex = (int) (index.get((int) (start - indexOffset)) - dataOffset);
-        int toIndex = (int) (index.get((int) (end - indexOffset)) - dataOffset);
+        int toIndex;
+        if(end < getLastInstance()) {
+            toIndex = (int) (index.get((int) (end - indexOffset + 1)) - dataOffset);
+        } else if(end == getLastInstance()) {
+            toIndex = data.size();
+        } else {
+            throw new IndexOutOfBoundsException();
+        }
 
-        return data.subList(fromIndex, toIndex);
+        return new ArrayList<>(data.subList(fromIndex, toIndex));
     }
 
     public void truncate(Long at) {
-        this.index.subList(0, (int) (at - indexOffset)).clear();
-        this.indexOffset = at;
-
         long i = this.index.get((int) (at - indexOffset));
         this.data.subList(0, (int) (i - dataOffset)).clear();
         this.dataOffset = i;
+
+        this.index.subList(0, (int) (at - indexOffset)).clear();
+        this.indexOffset = at;
     }
 
     public void add(long at, Collection<Command> commands) {

@@ -2,8 +2,8 @@ set key inside right top  vertical Right noreverse enhanced autotitles box linet
 
 set grid
 
-set xlabel "Throughput (kCommands/s)"
-set ylabel "Latency (ms)"
+set xlabel "Vazão (kComandos/s)"
+set ylabel "Latência (ms)"
 
 set style line 1 lc rgb 'blue' lt 1 lw 2 ps 1 pt 5;
 set style line 2 lc rgb 'dark-red' lt 2 lw 2 ps 1 pt 7;
@@ -13,7 +13,9 @@ set style line 5 lc rgb 'dark-pink' lt 5 lw 2 ps 1 pt 13;
 set style line 6 lc rgb 'dark-violet' lt 5 lw 2 ps 1 pt 13;
 set style line 7 lc rgb 'gray-90' lt 5 lw 2 ps 1 pt 13;
 
-plot for [i=1:words(datafiles)] word(datafiles, i) using ($13/1000):($14/1000000) with lines ls 1 title "Prototype #".i
+plot "../experiments/2018-10-04/results/InMemory.txt" using ($23/1000):($24/1000000) with lines ls 1 title "Em memória", \
+     "../experiments/2018-10-04/results/Dummy.txt" using ($23/1000):($24/1000000) with lines ls 2 title "Sem log", \
+     "../experiments/2018-10-04/results/InMemoryWriteOnly.txt" using ($23/1000):($24/1000000) with lines ls 3 title "Apenas escritas"
 
 
 # set yrange [0:3.0e+07]

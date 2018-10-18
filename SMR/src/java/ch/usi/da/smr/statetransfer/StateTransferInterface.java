@@ -1,13 +1,14 @@
 package ch.usi.da.smr.statetransfer;
 
+import ch.usi.da.smr.PartitionManager;
 import ch.usi.da.smr.log.LoggerInterface;
 import ch.usi.da.smr.message.Message;
 
 public interface StateTransferInterface {
 
-	public void init(LoggerInterface logger);
+	public void init(LoggerInterface logger, PartitionManager partitions, String token);
 
-    public Iterable<Message> restore(int ring, long from, long to);
+    public Message restore(int ring, long from);
     
     public void close();
 }

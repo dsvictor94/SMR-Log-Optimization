@@ -11,7 +11,7 @@ public interface LoggerInterface {
 
 	public void commit(int ring);
 
-	public Iterable<Message> retrive(int ring, long from, long to);
+	public Message retrive(int ring, long from);
 
 	public void truncate(int ring, long instance);
 

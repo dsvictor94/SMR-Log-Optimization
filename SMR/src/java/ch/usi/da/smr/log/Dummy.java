@@ -1,13 +1,13 @@
 package ch.usi.da.smr.log;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import ch.usi.da.smr.message.Command;
 import ch.usi.da.smr.message.Message;
 import ch.usi.da.smr.transport.ABListener;
 
 public class Dummy implements LoggerInterface {
-
-    private final Iterable<Message> emptyIterator = new ArrayList<>();
 
     @Override
     public void initialize(ABListener ab) {}
@@ -19,8 +19,8 @@ public class Dummy implements LoggerInterface {
 	public void commit(int ring) {}
 
 	@Override
-	public Iterable<Message> retrive(int ring, long from, long to) {
-		return emptyIterator;
+	public Message retrive(int ring, long from) {
+		return null;
 	}
 
 	@Override

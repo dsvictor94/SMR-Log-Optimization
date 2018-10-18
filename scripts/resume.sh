@@ -54,7 +54,7 @@ for row in `ls | cut -d_ -f2 | sort -n | uniq`; do
         file=$(echo *_${row}_${node}_*.out)
 
         if [[ "$file" == "replica"* ]]; then
-            value="$(cat "$file" | clear int +float | discart 10 | average 2)"
+            value="$(cat "$file" | clear int +float int | grep -v "0,00000" | discart 5 | average 2)"
             replica_values+=("$value")
         fi
 

@@ -48,7 +48,6 @@ import ch.usi.da.smr.misc.GzipCompress;
 import ch.usi.da.smr.recovery.CheckpointType;
 import ch.usi.da.smr.recovery.DfsRecovery;
 import ch.usi.da.smr.recovery.FTPRecovery;
-import ch.usi.da.smr.recovery.HttpRecovery;
 import ch.usi.da.smr.recovery.RecoveryInterface;
 import ch.usi.da.smr.recovery.SnapshotWriter;
 import ch.usi.da.smr.statetransfer.StateTransferFactory;
@@ -172,7 +171,7 @@ public class Replica implements Receiver {
 		this.replicaLogger = LoggerFactory.getLogger();
 		this.replicaLogger.initialize(ab);
 		this.stateTransfer = StateTransferFactory.getStateTransfer();
-		this.stateTransfer.init(this.replicaLogger);
+		this.stateTransfer.init(this.replicaLogger, this.partitions, this.token);
 
 		if(compressedCmds)
 			gzip = new GzipCompress();
@@ -212,7 +211,7 @@ public class Replica implements Receiver {
 		this.replicaLogger = LoggerFactory.getLogger();
 		this.replicaLogger.initialize(ab);
 		this.stateTransfer = StateTransferFactory.getStateTransfer();
-		this.stateTransfer.init(this.replicaLogger);
+		this.stateTransfer.init(this.replicaLogger, this.partitions, this.token);
 		
 		if(compressedCmds)
 			gzip = new GzipCompress();
@@ -241,6 +240,8 @@ public class Replica implements Receiver {
 	}
 
 	public void start(){
+		logger.info("Applcation logger: " + this.replicaLogger.getClass().getCanonicalName());
+		logger.info("State Transfer: " + this.stateTransfer.getClass().getCanonicalName());
 		partitions.registerPartitionChangeNotifier(this);
 		// install old state
 		exec_instance = load();
@@ -401,26 +402,16 @@ public class Replica implements Receiver {
 
 	@Override
 	public void receive(Message m) {
-		logger.debug("Replica received ring " + m.getRing() + " instnace " + m.getInstnce() + " (" + m + ")");
+		// logger.info("Replica received ring " + m.getRing() + " instnace " + m.getInstnce() + " (" + m + ")");
 		
 		while (m.getInstnce()-1 > exec_instance.get(m.getRing())) {
 			logger.info("Replica start recovery: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
 			exec_instance = load();
-			
-			logger.info("Replica start recovery from log: " + exec_instance.get(m.getRing()) + " to " + (m.getInstnce()-1));
-
-			for(Message lm : this.stateTransfer.restore(m.getRing(), exec_instance.get(m.getRing()), m.getInstnce()-1)) {
-				execute(lm);
-				this.replicaLogger.store(m);
-				this.replicaLogger.commit(m.getRing());
-
-				exec_instance.put(lm.getRing(), lm.getInstnce());
-			}
 		}
 
-		// skip already executed commands
+		// sip already executed commands
 		if (m.getInstnce() <= exec_instance.get(m.getRing())) {
-			logger.info("Replica skip already executed commands ("+m.getInstnce()+" <= " + exec_instance.get(m.getRing()) + ")");
+			// logger.info("Replica skip already executed commands ("+m.getInstnce()+" <= " + exec_instance.get(m.getRing()) + ")");
 			return;
 		} else if(m.isSkip() ){ // skip skip-instances
 			exec_instance.put(m.getRing(),m.getInstnce());
@@ -451,20 +442,38 @@ public class Replica implements Receiver {
 	}
 
 	public Map<Integer,Long> load(){
+		logger.info("Start recovery");
+		long start = System.nanoTime();
+		Map<Integer,Long> instances;
 		try{
-			return stable_storage.installState(token,db);
+			instances = stable_storage.installState(token,db);
 		}catch(Exception e){
 			if(!exec_instance.isEmpty()){
-				return exec_instance;
+				instances = exec_instance;
 			}else{ // init to 0
-				Map<Integer,Long> instances = new HashMap<Integer,Long>();
+				instances = new HashMap<Integer,Long>();
 				instances.put(partitions.getGlobalRing(),0L);
 				for(Partition p : partitions.getPartitions()){
 					instances.put(p.getRing(),0L);
 				}
-				return instances;
 			}
 		}
+
+		for(Entry<Integer,Long> entry: instances.entrySet()){
+			logger.info("Replica start recovery from log: ring " + entry.getKey() + " from " + (entry.getValue()+1));
+			Message lm = stateTransfer.restore(entry.getKey(), entry.getValue()+1);
+			if(lm != null) {
+				logger.info("Replica recovery from log ring " + lm.getRing() + " instnace " + lm.getInstnce());
+				execute(lm);
+				replicaLogger.store(lm);
+
+				entry.setValue(lm.getInstnce());
+			}
+		}
+
+		logger.info("Recovery done: time " + (System.nanoTime() - start));
+		
+		return instances;
 	}
 	
 	public boolean sync_checkpoint(){

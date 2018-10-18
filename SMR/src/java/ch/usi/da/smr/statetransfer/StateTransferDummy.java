@@ -1,6 +1,11 @@
 package ch.usi.da.smr.statetransfer;
 
+import java.util.Arrays;
+import java.util.List;
+
+import ch.usi.da.smr.PartitionManager;
 import ch.usi.da.smr.log.LoggerInterface;
+import ch.usi.da.smr.message.Command;
 import ch.usi.da.smr.message.Message;
 
 class StateTransferDummy implements StateTransferInterface {
@@ -8,15 +13,16 @@ class StateTransferDummy implements StateTransferInterface {
     private LoggerInterface logger = null;
 
     @Override
-    public void init(LoggerInterface logger) {
+    public void init(LoggerInterface logger, PartitionManager partitions, String token) {
         this.logger = logger;
     }
 
     @Override
-    public Iterable<Message> restore(int ring, long from, long to) {
-        return logger.retrive(ring, from, to);
+    public Message restore(int ring, long from) {
+        return logger.retrive(ring, from);
     }
 
     @Override
-    public void close() {}
+    public void close() {
+    }
 }
