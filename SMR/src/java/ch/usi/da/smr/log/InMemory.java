@@ -1,6 +1,10 @@
 package ch.usi.da.smr.log;
 
-import java.util.ArrayList;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -135,4 +139,21 @@ public class InMemory implements LoggerInterface {
         System.out.println("Size: " + logger.size());
         System.out.println("Message: " + logger.retrive(1, 1));
     }
+
+    @Override
+    public void serialize(int ring, long from, OutputStream out) throws IOException {
+        Log ringLog = this.getRingLog(ring);
+        DataOutputStream outStream = new DataOutputStream(out);
+        outStream.writeInt(ring);
+        ringLog.serialize(from, outStream);
+    }
+
+    @Override
+    public void install(InputStream in) throws IOException {
+        DataInputStream inStream = new DataInputStream(in);
+        int ring = inStream.readInt();
+        if(ring < 0) throw new IOException("not a valid log to isntall");
+        Log ringLog = this.getRingLog(ring);
+        ringLog.install(inStream);
+	}
 }

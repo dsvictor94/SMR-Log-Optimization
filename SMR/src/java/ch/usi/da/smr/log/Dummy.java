@@ -1,9 +1,8 @@
 package ch.usi.da.smr.log;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-import ch.usi.da.smr.message.Command;
 import ch.usi.da.smr.message.Message;
 import ch.usi.da.smr.transport.ABListener;
 
@@ -30,5 +29,11 @@ public class Dummy implements LoggerInterface {
     public Integer size() {
         return 0;
     }
+
+    @Override
+    public void serialize(int ring, long from, OutputStream out) {}
+
+    @Override
+    public void install(InputStream in) {}
 
 }

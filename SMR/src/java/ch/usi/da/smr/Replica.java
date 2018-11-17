@@ -120,7 +120,7 @@ public class Replica implements Receiver {
 	
 //	private Thread recovery = null;
 
-	private boolean compressedCmds = true;
+	private boolean compressedCmds = false;
 	private GzipCompress gzip = null;
 	
 	// for throughput statistics
@@ -411,7 +411,7 @@ public class Replica implements Receiver {
 
 		// sip already executed commands
 		if (m.getInstnce() <= exec_instance.get(m.getRing())) {
-			// logger.info("Replica skip already executed commands ("+m.getInstnce()+" <= " + exec_instance.get(m.getRing()) + ")");
+			logger.debug("Replica skip already executed commands ("+m.getInstnce()+" <= " + exec_instance.get(m.getRing()) + ")");
 			return;
 		} else if(m.isSkip() ){ // skip skip-instances
 			exec_instance.put(m.getRing(),m.getInstnce());

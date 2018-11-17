@@ -59,34 +59,11 @@ public class TCPStateTransfer extends Thread implements StateTransferInterface {
 
                     debug.warn("Waiting of "+host+" of ring "+ring+" from "+from);
                     DataInputStream in = new DataInputStream(socket.getInputStream());
-                    int size = in.readInt();
-                    if(size < 1) {
-                        debug.info("Host "+host+" refused to send log of ring "+ring+" from "+from);
-                    } else {
-                        long to = in.readLong();
-                        ArrayList<Command> cmds = new ArrayList<>();
-                        byte[] cmdBytes;
-                        for(int i=0; i<size; i++){
-                            int lenght = in.readInt();
-                            cmdBytes = new byte[lenght];
-                            int read = 0;
-                            while((read += in.read(cmdBytes, read, lenght-read)) != lenght);
-
-                            if(read != lenght) {
-                                debug.warn("Inconsistent command read ("+read+") != lenght ("+lenght+")");
-                            }
-                            cmds.add(Command.fromByteArray(cmdBytes));
-                        }
-
-                        cmdBytes = null;
-                        
-                        Message m = new Message(0, "", "", cmds);
-                        m.setRing(ring);
-                        m.setInstance(to);
-                        return m;
-                    }
-                } catch (Exception e) {
-                    debug.info("Could not recovery from "+host, e);
+                    
+                    logger.install(in);
+                    return logger.retrive(ring, from);
+                } catch (IOException e) {
+                    debug.info("Could not recovery from "+host);
                 } finally {
                     if(socket != null && !socket.isClosed())
                         try {
@@ -129,25 +106,14 @@ public class TCPStateTransfer extends Thread implements StateTransferInterface {
 
                 if(restoring) { // avoid restore from itself or from a unstable replica
                     debug.info("Not a stable replica. Skip");
-                    out.writeInt(0);
+                    out.writeInt(-1);
                 } else {
-                    Message log = this.logger.retrive(ring, from);
-
-                    if(log == null) {
+                    try {
+                        logger.serialize(ring, from, out);
+                        debug.info("Response with log");
+                    } catch(IOException ex) {
                         debug.info("Do not have message from ring "+ring+" from "+from+". Skip");
-                        out.writeInt(0);
-                    } else {
-                        List<Command> cmds = log.getCommands();
-                        out.writeInt(cmds.size());
-                        out.writeLong(log.getInstnce());
-
-                        for(Command cmd: cmds) {
-                            byte[] cmdBytes = Command.toByteArray(cmd);
-                            out.writeInt(cmdBytes.length);
-                            out.write(cmdBytes);
-                        }
-
-                        debug.info("Response with mensage of ring "+ring+" from "+from+" to "+log.getInstnce()+"with "+cmds.size()+"commands");
+                        out.writeInt(-1);
                     }
                 }
             } catch (IOException e) {

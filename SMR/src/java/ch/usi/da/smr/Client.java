@@ -128,7 +128,7 @@ public class Client implements Receiver {
 	
 	private final Map<Integer,Integer> connectMap;
 	
-	private boolean compressedCmds = true;
+	private boolean compressedCmds = false;
 	// table for keeping compressed commands in advance
 	private final Map<Integer,byte[]> compressedCommands = new HashMap<Integer,byte[]>();
 	private  int numDistinctCompressedCommands = 50000;
@@ -227,22 +227,26 @@ public class Client implements Receiver {
 								int i = 0;
 								Random rand = new Random();
 								
+								int lastId = 0;
 								while(send_count < send_per_thread){
-									int id;									
+									int id;
+									
 									List<Command> cmds = new ArrayList<Command>();								
 									//int printStats = 0;
 									
-									for (i = 0; i <  cmds_per_batch; i++){
-										id = send_id.incrementAndGet();										
-										if(compressedCmds){											
-											cmds.add(new Command(id,CommandType.PUT,localhost+"_user" + (id % numDistinctCommands), getCompressedCmd()));
-											//cmds.add(new Command(id,CommandType.PUT,localhost+"_user" + (id % key_count), getCompressedCmd()));
+									for (i = 0; i < cmds_per_batch; i++){
+										id = send_id.incrementAndGet();
+										if(send_count % 2 == 1) {
+											cmds.add(new Command(id,CommandType.GET,localhost+"_user" + (lastId % numDistinctCommands), new byte[0]));
+										} else {
+											lastId = id;
+											if(compressedCmds){											
+												cmds.add(new Command(id,CommandType.PUT,localhost+"_user" + (id % numDistinctCommands), getCompressedCmd()));
+											}
+											else {
+												cmds.add(new Command(id,CommandType.PUT,localhost+"_user" + (id % numDistinctCommands), new byte[value_size]));
+											}
 										}
-										else
-											cmds.add(new Command(id,CommandType.PUT,localhost+"_user" + (id % numDistinctCommands), new byte[value_size]));
-											//cmds.add(new Command(id,CommandType.PUT,localhost+"_user" + (id % key_count), new byte[value_size]));
-										
-											
 									}
 									
 									List<Response> r = null;
